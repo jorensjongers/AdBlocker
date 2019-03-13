@@ -74,12 +74,11 @@ public class Client {
 			System.out.println(chunkLength);
 			while (chunkLength != 0) {
 				body += readChunk(in, chunkLength);
-				System.out.println(body);
 				chunkLength = Integer.parseInt(in.readLine(), 16);	
 			}
 		}
 		
-		System.out.println(body);
+		// GIT TEST //
 		writer.write(body);
 		writer.close();
 		socket.close();

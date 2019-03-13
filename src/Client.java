@@ -48,24 +48,51 @@ public class Client {
 		out.writeBytes(command + "\n");
 		
 		// Receive response from socket
-		while (true) {
-			String response = in.readLine();
+		String response = in.readLine();
+		int contentLength = 0;
+		while (response.length() != 0) {
 			System.out.println(response);
-			if (response.length() == 0) 
-			     break;
+			response = in.readLine();
+			if (response.contains("Transfer-Encoding: chunked")) 
+				this.chunked = true;	
+			// Save content-length.
+			if (response.contains("Content-Length: "))
+				contentLength = Integer.parseInt(response.replaceAll("Content-Length: ", ""));
+		}
+	
+		// print empty line between header and body
+		System.out.println("\n");
+		
+		String body = "";
+		if (!chunked) {
+			for (int i = 0; i<contentLength; i++) {
+				body += readChunk(in, contentLength);
+			}
+			
+		} else {
+			int chunkLength = Integer.parseInt(in.readLine(), 16);
+			System.out.println(chunkLength);
+			while (chunkLength != 0) {
+				body += readChunk(in, chunkLength);
+				System.out.println(body);
+				chunkLength = Integer.parseInt(in.readLine(), 16);	
+			}
 		}
 		
-		@SuppressWarnings("unused")
-		String resp = in.readLine();
-		
-		
-		//int chunk_length = Integer.parseInt(in.readLine(), 16);
-		//System.out.println(chunk_length);
-		
-
+		System.out.println(body);
+		writer.write(body);
 		writer.close();
 		socket.close();
 		
+		
+	}
+	
+	private String readChunk(BufferedReader in, int length) throws IOException {
+		String chunk = "";
+		for (int i = 0; i<length+2; i++) {
+			chunk += (char) in.read();
+		}
+		return chunk;
 		
 	}
 	
@@ -86,6 +113,6 @@ public class Client {
 	private URI uri;
 	private String command;
 	private int port;
-	
+	private Boolean chunked = false;
 	
 }

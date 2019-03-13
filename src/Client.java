@@ -13,10 +13,14 @@ import javax.imageio.ImageWriter;
 
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
-
+import javax.imageio.ImageIO;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
+import java.awt.image.BufferedImage;
+import java.io.File;
 
 /**
  * 
@@ -87,10 +91,11 @@ public class Client {
 
 		
 		if (body.substring(1,4).equals("PNG")) {
-			System.out.println(body);
-			PrintWriter writer = new PrintWriter("afbeelding.png");
-			writer.write(body);
-			writer.close();
+			byte[] bodyBytes = body.getBytes();
+			ByteArrayInputStream bis = new ByteArrayInputStream(bodyBytes);
+			BufferedImage bImage2 = ImageIO.read(bis);
+			ImageIO.write(bImage2, "png", new File("Afbeelding.png") );
+
 		} else {
 		this.html = body;
 		PrintWriter writer = new PrintWriter("test.html", "UTF-8");

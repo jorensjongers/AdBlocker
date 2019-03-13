@@ -8,6 +8,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
 /**
  * 
  * @author Marta Bervoets & Joren 's Jongers
@@ -30,14 +35,13 @@ public class Client {
 		
 	}
 	
-	public void processCommand() throws UnknownHostException, IOException {
+	public void getHtmlFile(String relativeURI) throws UnknownHostException, IOException {
 		
 		String host = uri.getHost();
-		String path = uri.getPath();
+		String path = relativeURI;
 		Socket socket = new Socket(host, port);
 		DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 		BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-		PrintWriter writer = new PrintWriter("test.html", "UTF-8");
 		
 		
 		
@@ -47,7 +51,7 @@ public class Client {
 		
 		out.writeBytes(command + "\n");
 		
-		// Receive response from socket
+		// Receive header from socket
 		String response = in.readLine();
 		int contentLength = 0;
 		while (response.length() != 0) {
@@ -71,20 +75,83 @@ public class Client {
 			
 		} else {
 			int chunkLength = Integer.parseInt(in.readLine(), 16);
-			System.out.println(chunkLength);
 			while (chunkLength != 0) {
 				body += readChunk(in, chunkLength);
 				chunkLength = Integer.parseInt(in.readLine(), 16);	
 			}
 		}
 		
-		// GIT TEST // TEST TEST // TEST TEST TEST
+		this.html = body;
+		PrintWriter writer = new PrintWriter("test.html", "UTF-8");
 		writer.write(body);
 		writer.close();
-		socket.close();
-		
+		socket.close();	
+	}
+	
+	public void getHtmlFile() throws UnknownHostException, IOException {
+		getHtmlFile(this.uri.getPath());
 		
 	}
+	
+	
+	public void getImages(String pathOfHtmlFile) throws UnknownHostException, IOException {
+	
+		Document doc = Jsoup.parse(this.html, "http://" + this.uri.getHost());
+		Elements pngs = doc.select("img[src$=.png]");
+		
+		for (Element element : pngs) {
+			String relativeURI = "";
+			relativeURI = element.attr("src");
+			getHtmlFile(relativeURI);
+		}
+	}
+	
+	public void getImage(String relativeURI) throws IOException {
+		
+		String host = uri.getHost();
+		String path = relativeURI;
+		Socket socket = new Socket(host, port);
+		DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+		BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		
+		
+		
+		// Send command over socket
+		String command = this.command + " " + path + " " + "HTTP/1.1" +"\n";
+		command += "Host: " + host + "\n" + "\n";
+		
+		out.writeBytes(command + "\n");
+		
+		// Receive header from socket
+		String response = in.readLine();
+		while (response.length() != 0) {
+			System.out.println(response);
+			response = in.readLine();	
+		}
+	
+		// print empty line between header and body
+		System.out.println("\n");
+		
+		// get image
+		
+		Boolean ended = false;
+		String imageString = "";
+		while (! ended) {
+			imageString += (char) in.read();
+			
+			if (imageString.contains("IEND"))
+				imageString += (char) in.read();
+				imageString += (char) in.read();
+				imageString += (char) in.read();
+				imageString += (char) in.read();
+				ended = true;
+		}
+		
+		System.out.println(imageString);
+		
+		socket.close();
+	}
+	
 	
 	private String readChunk(BufferedReader in, int length) throws IOException {
 		String chunk = "";
@@ -105,7 +172,8 @@ public class Client {
 			client = new Client(args[0], args[1], Integer.parseInt(args[2]));
 		}
 	
-		client.processCommand();
+		client.getHtmlFile("/");
+		client.getImages("/test.html");
 				
 	}
 	
@@ -113,5 +181,5 @@ public class Client {
 	private String command;
 	private int port;
 	private Boolean chunked = false;
-	
+	private String html;
 }
